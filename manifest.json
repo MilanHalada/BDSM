@@ -1,0 +1,42 @@
+{
+  "manifest_version": 3,
+  "name": "Browser Dynamic State Manager",
+  "version": "1.0.0",
+  "description": "Manage Chrome tab groups as single-active workspaces.",
+  "permissions": [
+    "tabs",
+    "tabGroups",
+    "storage"
+  ],
+  "options_page": "options.html",
+  "background": {
+    "service_worker": "background.js"
+  },
+  "action": {},
+  "commands": {
+    "switch-previous-workspace": {
+      "suggested_key": {
+        "default": "Alt+Shift+Up"
+      },
+      "description": "Switch to previous workspace group"
+    },
+    "switch-next-workspace": {
+      "suggested_key": {
+        "default": "Alt+Shift+Down"
+      },
+      "description": "Switch to next workspace group"
+    },
+    "switch-previous-tab-in-workspace": {
+      "suggested_key": {
+        "default": "Alt+Shift+Left"
+      },
+      "description": "Switch to previous tab in current workspace"
+    },
+    "switch-next-tab-in-workspace": {
+      "suggested_key": {
+        "default": "Alt+Shift+Right"
+      },
+      "description": "Switch to next tab in current workspace"
+    }
+  }
+}

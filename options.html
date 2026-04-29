@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>BDSM — Settings</title>
+    <link rel="stylesheet" href="options.css" />
+  </head>
+  <body>
+    <div class="app">
+      <header class="masthead">
+        <h1 class="masthead-title">Browser Dynamic State Manager</h1>
+        <div class="masthead-actions">
+          <button type="button" class="btn btn-accent" id="btn-new-group" tabindex="0">New group</button>
+          <button type="button" class="btn" id="btn-refresh-groups" tabindex="0">Refresh</button>
+        </div>
+      </header>
+
+      <section class="panel" aria-labelledby="groups-heading">
+        <div class="panel-head panel-head-groups">
+          <div>
+            <h2 id="groups-heading">Tab groups · this window</h2>
+            <p class="muted small reorder-hint">Reorder: drag the handle on the left · order matches tab bar (left → right).</p>
+          </div>
+        </div>
+        <div id="groups-root" class="groups-root"></div>
+      </section>
+
+      <section class="panel" aria-labelledby="rules-heading">
+        <div class="panel-head panel-head-rules">
+          <h2 id="rules-heading">Auto group rules</h2>
+          <button type="button" class="btn btn-accent" id="btn-add-rule" tabindex="0">
+            Add rule
+          </button>
+        </div>
+        <p class="muted small rules-intro">
+          When a tab URL matches a rule’s regex, that tab joins the target group — the strip moves that workspace to the
+          <strong>end</strong>, <strong>expands</strong> it, and collapses others. Rules are evaluated top to bottom —
+          first match wins.
+        </p>
+        <datalist id="rule-groups-suggestions"></datalist>
+        <div id="rules-root" class="rules-root"></div>
+      </section>
+
+      <div id="rule-edit-modal" class="rule-modal" hidden role="dialog" aria-modal="true" aria-labelledby="rule-modal-heading">
+        <div class="rule-modal-backdrop" tabindex="-1" aria-hidden="true"></div>
+        <div class="rule-modal-sheet">
+          <div class="rule-modal-header-bar">
+            <h3 id="rule-modal-heading" class="rule-modal-title">Edit rule</h3>
+            <button type="button" class="btn btn-sm btn-modal-close" id="rule-modal-close-empty" aria-label="Close">&times;</button>
+          </div>
+          <div id="rule-modal-body" class="rule-modal-body"></div>
+        </div>
+      </div>
+
+      <div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
+    </div>
+    <script src="options.js"></script>
+  </body>
+</html>
