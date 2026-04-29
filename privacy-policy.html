@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Privacy Policy — Browser Dynamic State Manager</title>
+    <style>
+      :root {
+        color-scheme: light dark;
+        font-family:
+          system-ui,
+          Segoe UI,
+          Roboto,
+          Helvetica,
+          Arial,
+          sans-serif;
+        line-height: 1.5;
+        max-width: 44rem;
+        margin: 2rem auto;
+        padding: 0 1.25rem;
+      }
+      h1 {
+        font-size: 1.5rem;
+      }
+      h2 {
+        font-size: 1.125rem;
+        margin-top: 1.75rem;
+      }
+      footer {
+        margin-top: 2.5rem;
+        font-size: 0.875rem;
+        color: #555;
+      }
+    </style>
+  </head>
+  <body>
+    <article>
+      <h1>Privacy Policy</h1>
+      <p>
+        <strong>Browser Dynamic State Manager</strong> (“BDSM”, “the Extension”) is a browser extension provided as
+        free software. This page describes how the Extension handles information.
+      </p>
+
+      <h2>Summary</h2>
+      <p>
+        The Extension does not send your browsing data or settings to servers operated by the developer. Processing
+        happens locally in your browser using Chrome’s extension APIs.
+      </p>
+
+      <h2>Permissions and purpose</h2>
+      <ul>
+        <li>
+          <strong>tabs</strong> — To read tab properties (such as URLs and grouping) needed to organise tabs into tab
+          groups and to move tabs between groups when you use the Extension or configured rules.
+        </li>
+        <li>
+          <strong>tabGroups</strong> — To create, rename, reorder, collapse, and expand Chrome tab groups in line with the
+          workspace behaviour described in the Extension listing.
+        </li>
+        <li>
+          <strong>storage</strong> — To save settings and lightweight state locally on your device (see below).
+        </li>
+      </ul>
+
+      <h2>Data stored on your device</h2>
+      <p>
+        The Extension may store the following types of information locally using <code>chrome.storage.local</code>
+        (and similar browser storage APIs as implemented by Chromium). This data remains on your device unless you sync
+        it through unrelated browser features:
+      </p>
+      <ul>
+        <li>Which workspace (tab group) was last active in each browser window.</li>
+        <li>
+          Optional rules you configure in the Extension options (“Auto group rules”), such as regular expressions matched
+          against tab URLs, target tab group titles, colours, and whether each rule is enabled.
+        </li>
+      </ul>
+      <p>
+        URLs may be inspected in browser memory solely to evaluate those rules or to operate tab groups; they are not
+        transmitted to external services by this Extension’s code paths.
+      </p>
+
+      <h2>Analytics, advertising, and third parties</h2>
+      <p>
+        The Extension does not embed third-party analytics or advertising trackers. It does not sell personal information.
+      </p>
+
+      <h2>Changes</h2>
+      <p>This policy may be updated when the Extension is updated. Continued use after an update constitutes acceptance.</p>
+
+      <h2>Contact</h2>
+      <p>
+        For questions about this policy or the Extension, open an issue in the source repository listed on the Extension
+        store page under <strong>MilanHalada/BDSM</strong> on GitHub (<a href="https://github.com/MilanHalada/BDSM"
+          >github.com/MilanHalada/BDSM</a
+        >).
+      </p>
+
+      <footer>
+        <p>Last updated: April 29, 2026</p>
+      </footer>
+    </article>
+  </body>
+</html>
