@@ -2,7 +2,88 @@
 
 const AUTO_GROUP_RULES_KEY = "autoGroupRules";
 
+const GROUP_TITLE_DISPLAY_KEY = "groupTitleDisplay";
+
+const GROUP_BASE_TITLES_KEY = "groupBaseTitles";
+
 const GROUP_COLORS = ["grey", "blue", "red", "yellow", "green", "cyan", "purple", "pink", "orange"];
+
+async function loadGroupTitleDisplayOptions() {
+  const data = await chrome.storage.local.get(GROUP_TITLE_DISPLAY_KEY);
+
+  const raw = data[GROUP_TITLE_DISPLAY_KEY];
+
+  const o = typeof raw === "object" && raw !== null ? raw : {};
+
+  return {
+    showOrderInChromeTitle: o.showOrderInChromeTitle !== false,
+    showTabCountInChromeTitle: o.showTabCountInChromeTitle !== false
+  };
+}
+
+async function saveGroupTitleDisplayPartial(partial) {
+  const cur = await loadGroupTitleDisplayOptions();
+
+  const next = { ...cur, ...partial };
+
+  await chrome.storage.local.set({ [GROUP_TITLE_DISPLAY_KEY]: next });
+
+  await notifyBackgroundSyncGroupTitles({ type: "bdsm-sync-group-titles" });
+}
+
+async function persistGroupBaseInOptions(groupId, base) {
+  const data = await chrome.storage.local.get(GROUP_BASE_TITLES_KEY);
+
+  const map = {
+    ...(typeof data[GROUP_BASE_TITLES_KEY] === "object" && data[GROUP_BASE_TITLES_KEY] !== null ? data[GROUP_BASE_TITLES_KEY] : {})
+  };
+
+  map[String(groupId)] = String(base ?? "").trim();
+
+  await chrome.storage.local.set({ [GROUP_BASE_TITLES_KEY]: map });
+}
+
+/**
+ * @param {{ type: string, stripOrderWindowId?: number, stripGroupIds?: number[] }} payload
+ * @returns {Promise<boolean>}
+ */
+async function notifyBackgroundSyncGroupTitles(payload) {
+  bdsmDebugLog("options", "notify.syncGroupTitles.send", payload);
+
+  try {
+    await chrome.runtime.sendMessage(payload);
+
+    bdsmDebugLog("options", "notify.syncGroupTitles.ok", { type: payload.type });
+
+    return true;
+  } catch (err) {
+    console.error("bdsm-sync-group-titles failed", err);
+
+    bdsmDebugLog("options", "notify.syncGroupTitles.error", {
+      payload,
+      message: err instanceof Error ? err.message : String(err)
+    });
+
+    toast(err instanceof Error ? err.message : String(err ?? "Title sync failed"), "error");
+
+    return false;
+  }
+}
+
+/** Let Chrome commit tab-strip indices before the background reads `tabs.query`. */
+function settleStripReorderAfterMoves() {
+  bdsmDebugLog("options", "reorder.settle.rAF.start");
+
+  return new Promise((resolve) => {
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        bdsmDebugLog("options", "reorder.settle.rAF.done");
+
+        resolve();
+      });
+    });
+  });
+}
 
 const COLOR_HEX = {
   grey: "#6f6f7a",
@@ -155,35 +236,44 @@ async function hydrateSharedGroupTitlesDatalist() {
 
   dl.replaceChildren();
 
+  const baseStore = await chrome.storage.local.get(GROUP_BASE_TITLES_KEY);
+
+  const baseMap =
+    typeof baseStore[GROUP_BASE_TITLES_KEY] === "object" && baseStore[GROUP_BASE_TITLES_KEY] !== null
+      ? baseStore[GROUP_BASE_TITLES_KEY]
+      : {};
+
   const rows = [...(await chrome.tabGroups.query({ windowId: wid }))]
 
     .map((g) => {
-
       const raw = typeof g.title === "string" ? g.title.trim() : "";
 
       const colorStr = typeof g.color === "string" ? g.color : "";
 
       const colorSafe = GROUP_COLORS.includes(colorStr) ? colorStr : "grey";
 
-      return { raw, colorSafe, id: g.id };
+      const gk = String(g.id);
 
+      const stored = typeof baseMap[gk] === "string" ? baseMap[gk].trim() : "";
+
+      const display = stored || inferBaseFromDecoratedTitle(raw);
+
+      return { display, colorSafe, id: g.id };
     })
-    .sort((a, b) => a.raw.localeCompare(b.raw, undefined, { sensitivity: "accent" }));
+    .sort((a, b) => a.display.localeCompare(b.display, undefined, { sensitivity: "accent" }));
 
   for (const row of rows) {
-
-    const lk = row.raw.toLocaleLowerCase("en-US");
+    const lk = row.display.toLocaleLowerCase("en-US");
 
     groupTitleLowerToChromeColor.set(lk, row.colorSafe);
 
     const opt = document.createElement("option");
 
-    opt.value = row.raw;
+    opt.value = row.display;
 
-    opt.label = row.raw !== "" ? `${row.raw} · ${row.colorSafe}` : `Untitled (${row.id})`;
+    opt.label = row.display !== "" ? `${row.display} · ${row.colorSafe}` : `Untitled (${row.id})`;
 
     dl.appendChild(opt);
-
   }
 
 }
@@ -266,32 +356,35 @@ async function refreshGroupsView() {
 
     }
 
-    const enriched = groups.map((g) => ({
+    const baseStore = await chrome.storage.local.get(GROUP_BASE_TITLES_KEY);
 
+    const baseMap =
+      typeof baseStore[GROUP_BASE_TITLES_KEY] === "object" && baseStore[GROUP_BASE_TITLES_KEY] !== null
+        ? baseStore[GROUP_BASE_TITLES_KEY]
+        : {};
+
+    const sortedGroups = sortGroupsByVisualTabOrder(groups, tabs);
+
+    const enriched = sortedGroups.map((g) => ({
       ...g,
 
       tabs: groupedTabs.get(g.id) ?? []
-
     }));
-
-    enriched.sort((a, b) => {
-
-      const ai = Math.min(...(a.tabs.length ? a.tabs.map((t) => t.index) : [Infinity]));
-
-      const bi = Math.min(...(b.tabs.length ? b.tabs.map((t) => t.index) : [Infinity]));
-
-      return ai - bi;
-
-    });
 
     root.replaceChildren();
 
     const frag = document.createDocumentFragment();
 
-    for (const group of enriched) {
+    for (let i = 0; i < enriched.length; i++) {
+      const group = enriched[i];
 
-      frag.append(makeReorderableGroupWrapper(winId, group.id, renderGroupCard(group, enriched)));
-
+      frag.append(
+        makeReorderableGroupWrapper(
+          winId,
+          group.id,
+          renderGroupCard(group, enriched, i + 1, /** @type {Record<string, string>} */ (baseMap))
+        )
+      );
     }
 
     root.appendChild(frag);
@@ -306,9 +399,11 @@ async function refreshGroupsView() {
 
 /**
  * @param {chrome.tabGroups.TabGroup} group
- * @param {chrome.tabGroups.TabGroup[]} allGroups
+ * @param {(chrome.tabGroups.TabGroup & { tabs?: chrome.tabs.Tab[] })[]} allGroups
+ * @param {number} visualOrderNum
+ * @param {Record<string, string>} baseMap
  */
-function renderGroupCard(group, allGroups) {
+function renderGroupCard(group, allGroups, visualOrderNum, baseMap) {
   const accent = COLOR_HEX[group.color ?? "grey"] ?? "#6f6f7a";
 
   const card = el(`<article class="group-card"><div class="group-card-inner"></div></article>`);
@@ -316,13 +411,22 @@ function renderGroupCard(group, allGroups) {
   inner.style.borderLeftColor = accent;
 
   const head = el(`<div class="group-card-head"></div>`);
+  const titleRow = /** @type {HTMLElement} */ (el(`<div class="group-title-row"></div>`));
+  const orderBadge = /** @type {HTMLElement} */ (
+    el(`<span class="group-order-badge" aria-label="Order ${visualOrderNum}">${visualOrderNum}:</span>`)
+  );
   const titleWrap = el(`<div class="group-title-field">
     <label for="grp-title-${group.id}">Group title</label>
     <input id="grp-title-${group.id}" type="text" autocomplete="off" />
   </div>`);
 
   const titleInput = /** @type {HTMLInputElement} */ (titleWrap.querySelector("input"));
-  titleInput.value = normalizeTitle(group.title);
+
+  const gk = String(group.id);
+
+  const storedBase = typeof baseMap[gk] === "string" ? baseMap[gk].trim() : "";
+
+  titleInput.value = storedBase || inferBaseFromDecoratedTitle(group.title);
 
   titleInput.addEventListener(
     "change",
@@ -371,7 +475,9 @@ function renderGroupCard(group, allGroups) {
   const collapsed = normalizeTitle(group.collapsed ? "Collapsed" : "Expanded");
   const meta = el(`<div class="group-meta">${collapsed}</div>`);
 
-  head.appendChild(titleWrap);
+  titleRow.appendChild(orderBadge);
+  titleRow.appendChild(titleWrap);
+  head.appendChild(titleRow);
   head.appendChild(colorWrap);
   head.appendChild(meta);
 
@@ -388,7 +494,7 @@ function renderGroupCard(group, allGroups) {
     list.appendChild(row);
   } else {
     for (const tab of group.tabs) {
-      list.appendChild(renderTabRow(tab, group, allGroups));
+      list.appendChild(renderTabRow(tab, group, allGroups, baseMap));
     }
   }
 
@@ -738,11 +844,35 @@ function ensureGroupReorderDelegates() {
 
     }
 
+    bdsmDebugLog("options", "reorderDnD.plan", {
+      windowId: windowIdNum,
+      dragSourceGroupId: sourceId,
+      dropTargetGroupId: targetId,
+      insertBeforeTarget: beforeTarget,
+      orderBefore: curr,
+      orderNext: nextOrder
+    });
+
     try {
 
       await applyTabGroupStripOrder(windowIdNum, nextOrder);
 
-      toast("Group order updated");
+      bdsmDebugLog("options", "reorderDnD.stripMovesDone", {
+        windowId: windowIdNum,
+        stripGroupIds: nextOrder
+      });
+
+      await settleStripReorderAfterMoves();
+
+      const synced = await notifyBackgroundSyncGroupTitles({
+        type: "bdsm-sync-group-titles",
+        stripOrderWindowId: windowIdNum,
+        stripGroupIds: nextOrder
+      });
+
+      if (synced) {
+        toast("Group order updated");
+      }
 
       await refreshGroupsView();
 
@@ -829,14 +959,18 @@ async function handleNewGroup() {
     });
 
     await chrome.tabGroups.update(gid, {
-      title: "New group",
-
       color: /** @type {chrome.tabGroups.Color} */ ("grey"),
 
       collapsed: false
     });
 
-    toast("Created new group");
+    await persistGroupBaseInOptions(gid, "New group");
+
+    const synced = await notifyBackgroundSyncGroupTitles({ type: "bdsm-sync-group-titles" });
+
+    if (synced) {
+      toast("Created new group");
+    }
 
     await refreshGroupsView();
 
@@ -863,8 +997,9 @@ function tabDisplayTitle(tab) {
  * @param {chrome.tabs.Tab} tab
  * @param {chrome.tabGroups.TabGroup} currentGroup
  * @param {chrome.tabGroups.TabGroup[]} allGroups
+ * @param {Record<string, string>} baseMap
  */
-function renderTabRow(tab, currentGroup, allGroups) {
+function renderTabRow(tab, currentGroup, allGroups, baseMap) {
   const row = el(`<li class="tab-row"></li>`);
 
   const favWrap = /** @type {HTMLElement} */ (document.createElement("div"));
@@ -899,7 +1034,10 @@ function renderTabRow(tab, currentGroup, allGroups) {
   for (const g of allGroups.filter((grp) => grp.id !== currentGroup.id)) {
     const o = document.createElement("option");
     o.value = String(g.id);
-    o.textContent = normalizeTitle(g.title) ? normalizeTitle(g.title) : `#${g.id}`;
+    const gk = String(g.id);
+    const stored = typeof baseMap[gk] === "string" ? baseMap[gk].trim() : "";
+    const labelBase = stored || inferBaseFromDecoratedTitle(g.title);
+    o.textContent = labelBase || `#${g.id}`;
     select.appendChild(o);
   }
 
@@ -937,8 +1075,14 @@ async function handleTabMove(destinationGroupId, tabId) {
 
 async function handleGroupTitleBlur(groupId, value) {
   try {
-    await chrome.tabGroups.update(groupId, { title: value });
-    toast("Saved group title");
+    await persistGroupBaseInOptions(groupId, value);
+
+    const synced = await notifyBackgroundSyncGroupTitles({ type: "bdsm-sync-group-titles" });
+
+    if (synced) {
+      toast("Saved group title");
+    }
+
     await refreshGroupsView();
   } catch (e) {
     toast(String(e ?? "Cannot update"), "error");
@@ -1426,6 +1570,28 @@ function buildRuleEditorForm(rule, isNew) {
 
 document.addEventListener("DOMContentLoaded", () => {
   ensureGroupReorderDelegates();
+
+  const orderCh = /** @type {HTMLInputElement | null} */ (document.getElementById("opt-show-order-chrome"));
+
+  const countCh = /** @type {HTMLInputElement | null} */ (document.getElementById("opt-show-count-chrome"));
+
+  if (orderCh && countCh) {
+    loadGroupTitleDisplayOptions()
+      .then((d) => {
+        orderCh.checked = d.showOrderInChromeTitle;
+
+        countCh.checked = d.showTabCountInChromeTitle;
+      })
+      .catch(console.error);
+
+    orderCh.addEventListener("change", () => {
+      saveGroupTitleDisplayPartial({ showOrderInChromeTitle: orderCh.checked }).catch(console.error);
+    });
+
+    countCh.addEventListener("change", () => {
+      saveGroupTitleDisplayPartial({ showTabCountInChromeTitle: countCh.checked }).catch(console.error);
+    });
+  }
 
   document.getElementById("btn-new-group")?.addEventListener("click", () => handleNewGroup().catch(console.error));
 

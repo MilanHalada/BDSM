@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>BDSM · debug log</title>
+    <style>
+      :root {
+        color-scheme: dark light;
+        font: 12px/1.4 system-ui, sans-serif;
+      }
+      body {
+        margin: 0;
+        width: 420px;
+        max-height: 480px;
+        display: flex;
+        flex-direction: column;
+      }
+      .hint {
+        padding: 8px 10px;
+        font-size: 11px;
+        opacity: 0.85;
+        border-bottom: 1px solid #ccc;
+      }
+      .toolbar {
+        display: flex;
+        gap: 8px;
+        padding: 8px 10px;
+        flex-shrink: 0;
+      }
+      button {
+        cursor: pointer;
+        padding: 4px 10px;
+      }
+      pre#log {
+        margin: 0;
+        padding: 8px 10px;
+        flex: 1;
+        overflow: auto;
+        white-space: pre-wrap;
+        word-break: break-word;
+        background: #1e1e1e;
+        color: #d4d4d4;
+        font-size: 11px;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="hint">
+      Events from the <strong>background</strong> and <strong>options</strong> page are stored here. Normal website
+      DevTools do <strong>not</strong> show the service worker — use this popup or
+      <strong>chrome://extensions</strong> → BDSM → <strong>Service worker</strong> → Inspect.
+    </div>
+    <div class="toolbar">
+      <button type="button" id="btn-refresh">Refresh</button>
+      <button type="button" id="btn-clear">Clear log</button>
+    </div>
+    <pre id="log" aria-live="polite">Loading…</pre>
+    <script src="debug-log.js"></script>
+    <script src="popup.js"></script>
+  </body>
+</html>

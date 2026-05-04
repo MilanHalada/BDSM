@@ -12,31 +12,64 @@
   "background": {
     "service_worker": "background.js"
   },
-  "action": {},
+  "action": {
+    "default_popup": "popup.html",
+    "default_title": "BDSM · debug event log"
+  },
   "commands": {
     "switch-previous-workspace": {
       "suggested_key": {
         "default": "Alt+Shift+Up"
       },
-      "description": "Switch to previous workspace group"
+      "description": "Previous workspace along the strip"
     },
     "switch-next-workspace": {
       "suggested_key": {
         "default": "Alt+Shift+Down"
       },
-      "description": "Switch to next workspace group"
+      "description": "Next workspace along the strip"
     },
     "switch-previous-tab-in-workspace": {
       "suggested_key": {
         "default": "Alt+Shift+Left"
       },
-      "description": "Switch to previous tab in current workspace"
+      "description": "Previous tab in active workspace"
     },
     "switch-next-tab-in-workspace": {
       "suggested_key": {
         "default": "Alt+Shift+Right"
       },
-      "description": "Switch to next tab in current workspace"
+      "description": "Next tab in active workspace"
+    },
+    "switch-workspace-1": {
+      "description": "Jump to workspace 1 (strip order · bind shortcut under Extensions → Keyboard shortcuts)"
+    },
+    "switch-workspace-2": {
+      "description": "Jump to workspace 2 (bind shortcut)"
+    },
+    "switch-workspace-3": {
+      "description": "Jump to workspace 3 (bind shortcut)"
+    },
+    "switch-workspace-4": {
+      "description": "Jump to workspace 4 (bind shortcut)"
+    },
+    "switch-workspace-5": {
+      "description": "Jump to workspace 5 (bind shortcut)"
+    },
+    "switch-workspace-6": {
+      "description": "Jump to workspace 6 (bind shortcut)"
+    },
+    "switch-workspace-7": {
+      "description": "Jump to workspace 7 (bind shortcut)"
+    },
+    "switch-workspace-8": {
+      "description": "Jump to workspace 8 (bind shortcut)"
+    },
+    "switch-workspace-9": {
+      "description": "Jump to workspace 9 (bind shortcut)"
+    },
+    "switch-workspace-0": {
+      "description": "Jump to workspace 10 · bind shortcut (e.g. Alt+Shift+0)"
     }
   }
 }
